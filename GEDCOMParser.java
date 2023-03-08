@@ -1,29 +1,58 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
 
 public class GEDCOMParser {
-    private static Map<String, String> birthDateMap = new HashMap<String, String>();
-    private static Map<String, String> deathDateMap = new HashMap<String, String>();
-    public static void checkCorrEntries(Map<String, Individual> indis, Map<String, Family> fams, ArrayList<String> errorList){
-        private static String getDateString(String line) {
-            if (line.startsWith("2 DATE")) {
-                return line.substring(7).trim();
+
+    public static boolean isBirthBeforeDeath(Individual indi){
+        if(!indi.isAlive()){
+            LocalDate birthdate = indi.getBirthday();
+            LocalDate deathDate = (LocalDate) indi.getDeathDate();
+            if(!birthdate.isBefore(deathDate)){
+                return true;
             }
-            return null;
         }
+        return false;
+    }
+
+    public static boolean isMarrBeforeDiv(Family fam){
+        if(fam.getMarried() != "NA" && fam.getDivorced() != "NA"){
+            LocalDate marrdate = (LocalDate) fam.getMarried();
+            LocalDate divDate = (LocalDate) fam.getDivorced();
+            if(!marrdate.isBefore(divDate)){
+                return true;
+            }
+        }
+        return false;
+    }
+    public static boolean marrAgeDiff(Map<String, Individual> indiMap, Family fam){
+            Individual husband = indiMap.get(fam.getHusbandID());
+            Individual wife = indiMap.get(fam.getWifeID());
+            long hbd = husband.getAge();
+            long wbd = wife.getAge();
+            if(hbd > wbd && hbd > wbd*2){
+                return true;
+            }else if(wbd > hbd && wbd > hbd*2){
+                return true;
+            }
+        return false;
+    }
+    public static boolean isRecentBorn(LocalDate brithDate){
+        LocalDate currentDate = LocalDate.now();
+        long daysBtn = ChronoUnit.DAYS.between(brithDate, currentDate);
+        if(daysBtn <= 30 && daysBtn >= 0){
+            return true;
+        }
+        return false;
+    }
+
+    public static void checkCorrEntries(Map<String, Individual> indis, Map<String, Family> fams, ArrayList<String> errorList){
         String isChild;
         String isSpouse;
         String indiName;
@@ -85,7 +114,7 @@ public class GEDCOMParser {
         Pattern ypattern = Pattern.compile("^\\d{4,4}$");
         Pattern mpattern = Pattern.compile("^[a-zA-Z]{3,3}$");
         HashMap<String, Integer> months = new HashMap<>() {{put("JAN", 31);put("FEB", 28);put("MAR", 31);
-            put("APR", 30);put("MAY", 31);put("JUN", 30);put("JUL", 31);put("AUG", 31);put("SEPT", 30);
+            put("APR", 30);put("MAY", 31);put("JUN", 30);put("JUL", 31);put("AUG", 31);put("SEP", 30);
             put("OCT", 31);put("NOV", 30);put("DEC", 31);
         }};
 
@@ -178,21 +207,39 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("BIRT")){
                                 currentIndividual.setBirthday(inputdate);
                                 dateType = "Birth";
+                                if(isRecentBorn(inputdate)){
+                                    errorList.add(String.format("Error US35: %s (%s) is born in the last 30 days", currentIndividual.getName().replace("/",""), currentIndividual.getId()));
+                                }
                             }
 
                             if (preTokens[1].equals("DEAT")){
                                 currentIndividual.setDeath(inputdate);
                                 dateType = "Death";
+                                if(isBirthBeforeDeath(currentIndividual)){
+                                    LocalDate birthdate = currentIndividual.getBirthday();
+                                    LocalDate deathDate = (LocalDate) currentIndividual.getDeathDate();
+                                    errorList.add(String.format("Error US03: Birth date (%s) of %s should occur before death date (%s) of an individual", birthdate.toString() , currentIndividual.getName().replace("/", ""), deathDate.toString()));
+                                }
                             }
 
                             if (preTokens[1].equals("DIV")){
                                 currentFamily.setDivorced(inputdate);
                                 dateType = "Divorced";
+                                if(isMarrBeforeDiv(currentFamily)){
+                                    LocalDate marrdate = (LocalDate) currentFamily.getMarried();
+                                    LocalDate divDate = (LocalDate) currentFamily.getDivorced();
+                                    errorList.add(String.format("Error US04: Married date (%s) of Husband = %s and Wife = %s should occur before divorced date (%s) of an individual", marrdate.toString(), currentFamily.getHusbandID(), currentFamily.getWifeID(), divDate.toString()));
+                                }
                             }
 
                             if (preTokens[1].equals("MARR")) {
                                 currentFamily.setMarried(inputdate);
                                 dateType = "Married";
+                                if(marrAgeDiff(individualsMap, currentFamily)){
+                                    Individual husband = individualsMap.get(currentFamily.getHusbandID());
+                                    Individual wife = individualsMap.get(currentFamily.getWifeID());
+                                    errorList.add(String.format("Error US34: FamilyID = {%s}, Husband = {%s}, HusbandID = {%s}, Husband-brirthdate = {%s}, Wife = {%s}, WifeID = {%s}, Wife-birthdate = {%s}",currentFamily.getId(), husband.getName(), husband.getId(), husband.getBirthday().toString(), wife.getName(), wife.getId(), wife.getBirthday()));
+                                }
                             }
                             if(!inputdate.isBefore(currDate)){
                                 errorList.add(String.format("Error US01 : %s date (%s) of %s (%s) must be before today's date!", dateType,dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
@@ -230,19 +277,19 @@ public class GEDCOMParser {
             System.err.println(e.getMessage());
         }
 
-//        System.out.println("Individuals:");
-//        for (String iid : individualsMap.keySet()) {
-//            Individual indiv = individualsMap.get(iid);
-//            System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
-//                    iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
-//        }
-//
-//        System.out.println("Family:");
-//        for (String fid : familiesMap.keySet()) {
-//            Family fam = familiesMap.get(fid);
-//            System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
-//                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildern().toString());
-//        }
+        System.out.println("Individuals:");
+        for (String iid : individualsMap.keySet()) {
+            Individual indiv = individualsMap.get(iid);
+            System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                    iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+        }
+
+        System.out.println("Family:");
+        for (String fid : familiesMap.keySet()) {
+            Family fam = familiesMap.get(fid);
+            System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
+                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildern().toString());
+        }
         System.out.println("Deceased:");
         for (String iid : individualsMap.keySet()) {
             Individual indiv = individualsMap.get(iid);
@@ -252,71 +299,10 @@ public class GEDCOMParser {
 
             }
         }
-
         System.out.println("\nErrors and Anomalies:");
         for(String err: errorList){
             System.out.println(err);
         }
-    }
-     // Check if file path is provided as argument
-     if (args.length == 0) {
-        System.out.println("Please provide the GEDCOM file path as an argument.");
-        return;
-    }
-    
-    String gedcomFilePath = args[0];
-    
-    // Check if file exists
-    File gedcomFile = new File(gedcomFilePath);
-    if (!gedcomFile.exists() || gedcomFile.isDirectory()) {
-        System.out.println("The provided file path does not exist or is a directory.");
-        return;
-    }
-    
-    // Read GEDCOM file line by line
-    try (Scanner scanner = new Scanner(gedcomFile)) {
-        
-        while (scanner.hasNextLine()) {
-            
-            String line = scanner.nextLine().trim();
-            
-            // Check if this line is an individual record
-            if (line.startsWith("0 @I")) {
-                
-                String individualId = line.substring(2, line.indexOf('@', 2));
-                String birthDate = null;
-                String deathDate = null;
-                
-                // Iterate through lines of this individual record to find birth and death dates
-                while (scanner.hasNextLine()) {
-                    line = scanner.nextLine().trim();
-                    
-                    if (line.startsWith("1 BIRT")) {
-                        birthDate = getDateString(scanner.nextLine().trim());
-                    } else if (line.startsWith("1 DEAT")) {
-                        deathDate = getDateString(scanner.nextLine().trim());
-                    } else if (line.startsWith("0 @")) {
-                        // End of individual record
-                        break;
-                    }
-                }
-                
-                if (birthDate != null && deathDate != null && birthDate.compareTo(deathDate) > 0) {
-                    System.out.println("Individual with ID " + individualId + " has birth date " + birthDate
-                            + " after death date " + deathDate);
-                }
-                
-                // Store birth and death dates in maps for future use
-                birthDateMap.put(individualId, birthDate);
-                deathDateMap.put(individualId, deathDate);
-            }
-        }
-        
-        System.out.println("GEDCOM file has been tested for birth before death.");
-        
-    } catch (FileNotFoundException e) {
-        System.out.println("An error occurred while trying to read the GEDCOM file.");
-        e.printStackTrace();
     }
 }
 
