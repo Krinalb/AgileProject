@@ -11,6 +11,29 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static void marrAgeDiff(Map<String, Individual> indiMap, Map<String, Family> familyMap, Map<String, String[]> ageDiffList){
+    for(String fid: familyMap.keySet()){
+        Family fam = familyMap.get(fid);
+        Individual husband = indiMap.get(fam.getHusbandID());
+        Individual wife = indiMap.get(fam.getWifeID());
+        long hbd = husband.getAge();
+        long wbd = wife.getAge();
+        if(hbd > wbd && hbd > wbd*2){
+            ageDiffList.put(fid, new String[]{fam.getHusbandID(), fam.getWifeID()});
+        }else if(wbd > hbd && wbd > hbd*2){
+            ageDiffList.put(fid, new String[]{fam.getHusbandID(), fam.getWifeID()});
+        }
+    }
+}
+public static boolean isRecentBorn(LocalDate brithDate){
+    LocalDate currentDate = LocalDate.now();
+    long daysBtn = ChronoUnit.DAYS.between(brithDate, currentDate);
+    if(daysBtn <= 30 && daysBtn >= 0){
+        return true;
+    }
+    return false;
+}
+
     public static void checkCorrEntries(Map<String, Individual> indis, Map<String, Family> fams, ArrayList<String> errorList){
         String isChild;
         String isSpouse;
@@ -102,6 +125,8 @@ public class GEDCOMParser {
         Map<String, Individual> individualsMap = new TreeMap<>();
         Map<String, Family> familiesMap = new TreeMap<>();
         ArrayList<String> errorList = new ArrayList<>();
+        ArrayList<String> recentBorn = new ArrayList<>();
+Map<String, String[]> ageDiff = new TreeMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
@@ -166,6 +191,9 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("BIRT")){
                                 currentIndividual.setBirthday(inputdate);
                                 dateType = "Birth";
+                                if(isRecentBorn(inputdate)){
+    recentBorn.add(currentIndividual.getId());
+}
                             }
 
                             if (preTokens[1].equals("DEAT")){
@@ -212,6 +240,7 @@ public class GEDCOMParser {
                 preTokens = tokens;
             }
             checkCorrEntries(individualsMap, familiesMap, errorList);
+            marrAgeDiff(individualsMap, familiesMap, ageDiff);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {
@@ -240,6 +269,21 @@ public class GEDCOMParser {
 
             }
         }
+        System.out.println("US35: Recent Born:");
+for (String iid : recentBorn) {
+    Individual indiv = individualsMap.get(iid);
+        System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+
+}
+
+System.out.println("US34: Large Age Differneces:");
+for (String fid : ageDiff.keySet()) {
+    String[] idArr = ageDiff.get(fid);
+    Individual husband = individualsMap.get(idArr[0]);
+    Individual wife = individualsMap.get(idArr[1]);
+    System.out.printf("FamilyID = {%s}, Husband = {%s}, HusbandID = {%s}, , Husband-brirthdate = {%s}, Wife = {%s}, WifeID = {%s}, Wife-birthdate = {%s}\n",fid, husband.getName(), husband.getId(), husband.getBirthday().toString(), wife.getName(), wife.getId(), wife.getBirthday());
+}
 
         System.out.println("\nErrors and Anomalies:");
         for(String err: errorList){
