@@ -125,8 +125,13 @@ public class GEDCOMParser {
                             individualsMap.put(tokens[1], currentIndividual);
                         }
                     } else if (tokens.length >= 3 && tokens[2].equals("FAM")) {
-                        currentFamily = new Family(tokens[1]);
-                        familiesMap.put(tokens[1], currentFamily);
+                        if( familiesMap.containsKey(tokens[1])){
+                            errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
+                        }
+                        else {
+                            currentFamily = new Family(tokens[1]);
+                            familiesMap.put(tokens[1], currentFamily);
+                        }
                     }
                 } else if (tokens[0].equals("1") || tokens[0].equals("2") || tokens[0].equals("0")) {
                     switch (tokens[1]) {
