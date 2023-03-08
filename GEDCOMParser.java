@@ -136,7 +136,23 @@ public class GEDCOMParser {
 
         return true;
     }
+    public static boolean isIndividualUniqueId(Map<String, Individual> indiMap, String id){
+       return indiMap.containsKey(id);
+    }
+    public static boolean isFamilyUniqueId(Map<String, Family> famMap, String id){
+        return famMap.containsKey(id);
+    }
 
+    public static void listDeceased(Map<String,Individual> indiMap){
+        for (String iid : indiMap.keySet()) {
+            Individual indiv = indiMap.get(iid);
+            if(!indiv.isAlive()) {
+                System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                        iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+
+            }
+        }
+    }
     public static void main(String[] args) {
         String fileName = "/Users/jaydeepdobariya/Desktop/Spring Sem/CS 555 - Agile Methodologies/family.ged"; // replace with actual file name
 
@@ -158,7 +174,7 @@ public class GEDCOMParser {
                 }
                 if (tokens[0].equals("0")) {
                     if (tokens.length >= 3 && tokens[2].equals("INDI")) {
-                        if(individualsMap.containsKey(tokens[1])){
+                        if(isIndividualUniqueId(individualsMap,tokens[1])){
                             errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
                         }
                         else {
@@ -166,7 +182,7 @@ public class GEDCOMParser {
                             individualsMap.put(tokens[1], currentIndividual);
                         }
                     } else if (tokens.length >= 3 && tokens[2].equals("FAM")) {
-                        if( familiesMap.containsKey(tokens[1])){
+                        if( isFamilyUniqueId(familiesMap,tokens[1])){
                             errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
                         }
                         else {
@@ -291,14 +307,8 @@ public class GEDCOMParser {
                     fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildern().toString());
         }
         System.out.println("Deceased:");
-        for (String iid : individualsMap.keySet()) {
-            Individual indiv = individualsMap.get(iid);
-            if(!indiv.isAlive()) {
-                System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
-                        iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+        listDeceased(individualsMap);
 
-            }
-        }
         System.out.println("\nErrors and Anomalies:");
         for(String err: errorList){
             System.out.println(err);
