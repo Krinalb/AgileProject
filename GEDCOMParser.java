@@ -136,6 +136,14 @@ public class GEDCOMParser {
 
         return true;
     }
+
+    public static boolean isInputDateValid(LocalDate input){
+        if(input.isBefore(LocalDate.now())){
+            return true;
+        }
+        return false;
+    }
+
     public static boolean isIndividualUniqueId(Map<String, Individual> indiMap, String id){
        return indiMap.containsKey(id);
     }
@@ -257,7 +265,7 @@ public class GEDCOMParser {
                                     errorList.add(String.format("Error US34: FamilyID = {%s}, Husband = {%s}, HusbandID = {%s}, Husband-brirthdate = {%s}, Wife = {%s}, WifeID = {%s}, Wife-birthdate = {%s}",currentFamily.getId(), husband.getName(), husband.getId(), husband.getBirthday().toString(), wife.getName(), wife.getId(), wife.getBirthday()));
                                 }
                             }
-                            if(!inputdate.isBefore(currDate)){
+                            if(!isInputDateValid(inputdate)){
                                 errorList.add(String.format("Error US01 : %s date (%s) of %s (%s) must be before today's date!", dateType,dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
                             }
                             break;
