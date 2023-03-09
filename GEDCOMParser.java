@@ -145,10 +145,10 @@ public class GEDCOMParser {
     }
 
     public static boolean isIndividualUniqueId(Map<String, Individual> indiMap, String id){
-       return indiMap.containsKey(id);
+       return !indiMap.containsKey(id);
     }
     public static boolean isFamilyUniqueId(Map<String, Family> famMap, String id){
-        return famMap.containsKey(id);
+        return !famMap.containsKey(id);
     }
 
     public static void listDeceased(Map<String,Individual> indiMap){
@@ -182,7 +182,7 @@ public class GEDCOMParser {
                 }
                 if (tokens[0].equals("0")) {
                     if (tokens.length >= 3 && tokens[2].equals("INDI")) {
-                        if(isIndividualUniqueId(individualsMap,tokens[1])){
+                        if(!isIndividualUniqueId(individualsMap,tokens[1])){
                             errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
                         }
                         else {
@@ -190,7 +190,7 @@ public class GEDCOMParser {
                             individualsMap.put(tokens[1], currentIndividual);
                         }
                     } else if (tokens.length >= 3 && tokens[2].equals("FAM")) {
-                        if( isFamilyUniqueId(familiesMap,tokens[1])){
+                        if( !isFamilyUniqueId(familiesMap,tokens[1])){
                             errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
                         }
                         else {
