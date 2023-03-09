@@ -45,4 +45,37 @@ public class GEDCOMTest {
         String test3 = GEDCOMParser.isRecentBorn(LocalDate.of(2023, 3, 8));
 		assertEquals(test3);
     }
+
+
+	void testUniqueIndividualID(){
+		Individual indi1 = new Individual("1");
+		Map<String,Individual> indimap = new TreeMap<>();
+		indimap.put("1",indi1);
+		boolean result1 = GEDCOMParser.isIndividualUniqueId(indimap,"1");
+		assertFalse(result1);
+		boolean result2 = GEDCOMParser.isIndividualUniqueId(indimap, "2");
+		assertTrue(result2);
+		Individual indi2 = new Individual("2");
+		indimap.put(indi2);
+		boolean result3 = GEDCOMParser.isIndividualUniqueId(indimap, "2");
+		assertFalse(result3);
+
+	}
+
+
+	void testUniqueFamilyID(){
+		Family fam1 = new Family("1");
+		Map<String,Family> famMap = new TreeMap<>();
+		famMap.put("1",fam1);
+		boolean result1 = GEDCOMParser.isIndividualUniqueId(famMap,"1");
+		assertFalse(result1);
+		boolean result2 = GEDCOMParser.isIndividualUniqueId(famMap, "2");
+		assertTrue(result2);
+		Family fam2 = new Family("2");
+		famMap.put("2",fam2);
+		boolean result3 = GEDCOMParser.isIndividualUniqueId(famMap, "2");
+		assertFalse(result3);
+	}
+
+
 }
