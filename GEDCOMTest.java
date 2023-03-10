@@ -1,7 +1,7 @@
 import junit.framework.TestSuite;
 import org.junit.jupiter.api.Test;
 import org.junit.runners.Suite;
-
+import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +18,32 @@ public class GEDCOMTest {
         boolean result2 = GEDCOMParser.isInputDateValid(LocalDate.of(2050, 2, 18));
         assertFalse(result2);
         boolean result3 = GEDCOMParser.isInputDateValid(LocalDate.of(2023, 4, 3));
+        assertFalse(result3);
+    }
+    @Test
+    void testBirthBeforeMarriage(){
+        Individual husband = new Individual("1");
+        Individual wife = new Individual("2")
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern( tokens[2].length() < 2 ? "d MMM yyyy": "dd MMM yyyy");
+        LocalDate inputdate = LocalDate.parse("1 AUG 1978",formatter);
+        husband.setBirthday(inputdate);
+        inputdate = LocalDate.parse("1 AUG 1980",formatter);
+        wife.setBirthday(inputdate);
+         Map<String,Individual> indimap = new TreeMap<>();
+        Family fam = new Family("1");
+        fam.setHusbandID("1");
+        fam.setWifeID("2");
+        inputdate = LocalDate.parse("1 AUG 2000",formatter);
+        fam.setMarried(inputdate);
+        boolean result1 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
+        assertTrue(result1);
+        inputdate = LocalDate.parse("1 AUG 1979",formatter);
+        fam.setMarried(inputdate);
+        boolean result2 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
+        assertFalse(result2);
+        inputdate = LocalDate.parse("1 AUG 1960",formatter);
+        fam.setMarried(inputdate);
+        boolean result3 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
         assertFalse(result3);
     }
 

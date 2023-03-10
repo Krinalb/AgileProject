@@ -10,6 +10,19 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam){
+        Individual husband = indiMap.get(fam.getHusbandID());
+            Individual wife = indiMap.get(fam.getWifeID());
+            LocalDate hbd = husband.getBirthday();
+            LocalDate wbd = wife.getBirthday();
+            LocalDate marrDate = (LocalDate) fam.getMarried();
+            
+            if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
+                return false;
+            }
+        return true;
+    }
+
     public static boolean isBirthBeforeDeath(Individual indi){
         if(!indi.isAlive()){
             LocalDate birthdate = indi.getBirthday();
@@ -205,11 +218,17 @@ public class GEDCOMParser {
                             break;
 
                         case "HUSB":
-                            if (currentFamily != null) currentFamily.setHusbandID(tokens[2]);
+                            if (currentFamily != null){
+                                 currentFamily.setHusbandID(tokens[2]);
+                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
+                            }
                             break;
 
                         case "WIFE":
-                            if (currentFamily != null) currentFamily.setWifeID(tokens[2]);
+                            if (currentFamily != null){
+                                 currentFamily.setWifeID(tokens[2]);
+                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
+                            }
                             break;
 
                         case "CHIL":
@@ -259,6 +278,12 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("MARR")) {
                                 currentFamily.setMarried(inputdate);
                                 dateType = "Married";
+                                if(!isBirthBeforeMarriage(individualsMap,currentFamily)){
+                                    Individual husband = individualsMap.get(currentFamily.getHusbandID());
+                                    Individual wife = individualsMap.get(currentFamily.getWifeID());
+                                    errorList.add(String.format("Error US02: MARRIAGE BEFORE BIRTH - FamilyID = {%s}, Husband = {%s}, HusbandID = {%s}, Husband-brirthdate = {%s}, Wife = {%s}, WifeID = {%s}, Wife-birthdate = {%s}, Marriage-Date = {%s}",currentFamily.getId(), husband.getName(), husband.getId(), husband.getBirthday().toString(), wife.getName(), wife.getId(), wife.getBirthday(), currentFamily.getMarried()));
+                                
+                                }
                                 if(marrAgeDiff(individualsMap, currentFamily)){
                                     Individual husband = individualsMap.get(currentFamily.getHusbandID());
                                     Individual wife = individualsMap.get(currentFamily.getWifeID());
@@ -334,6 +359,7 @@ class Individual {
     private LocalDate death = null;
     private String isSpouse = "NA";
     private String isChild = "NA";
+    private Family family = null;
     private List<String> comments = new ArrayList<>();
     public Individual(String id) {
         this.id = id;
@@ -403,6 +429,14 @@ class Individual {
 
     public void setChild(String child){
         this.isChild = child;
+    }
+
+    public Family getFamily(){
+        return this.family;
+    }
+
+    public void setFamily(Family fam){
+        this.family = fam;
     }
 
 }
