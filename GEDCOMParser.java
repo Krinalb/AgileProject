@@ -187,14 +187,18 @@ public class GEDCOMParser {
             Family currentFamily = null;
             String[] preTokens = null;
             boolean preTokenflag = true;
+            boolean tooOldFlag = false;
             while ((line = br.readLine()) != null) {
+                
                 String[] tokens = line.split(" ");
                 if (preTokenflag) {
                     preTokens = tokens;
                     preTokenflag = false;
                 }
                 if (tokens[0].equals("0")) {
+                    tooOldFlag = false;
                     if (tokens.length >= 3 && tokens[2].equals("INDI")) {
+                        
                         if(!isIndividualUniqueId(individualsMap,tokens[1])){
                             errorList.add(String.format("Error US22: Id (%s) is not unqiue ",tokens[1]));
                         }
@@ -250,6 +254,7 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("BIRT")){
                                 currentIndividual.setBirthday(inputdate);
                                 dateType = "Birth";
+                                if(currentIndividual.getAge() > 150) tooOldFlag = true;
                                 if(isRecentBorn(inputdate)){
                                     errorList.add(String.format("Error US35: %s (%s) is born in the last 30 days", currentIndividual.getName().replace("/",""), currentIndividual.getId()));
                                 }
@@ -258,6 +263,7 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("DEAT")){
                                 currentIndividual.setDeath(inputdate);
                                 dateType = "Death";
+                                if(currentIndividual.getAgeAtDeath() < 150) tooOldFlag = false;
                                 if(isBirthBeforeDeath(currentIndividual)){
                                     LocalDate birthdate = currentIndividual.getBirthday();
                                     LocalDate deathDate = (LocalDate) currentIndividual.getDeathDate();
@@ -314,11 +320,19 @@ public class GEDCOMParser {
 
                         case "HEAD", "TRLR", "NOTE":
                             break;
-
+                        
+                        
                     }
                 }
                 preTokens = tokens;
+                 if(tooOldFlag == true){
+                errorList.add(String.format("Error US07 :Individual %s (%s) was alive for 150 or more years",currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
+                tooOldFlag = false;            
+              }
+                 
             }
+           
+           
             checkCorrEntries(individualsMap, familiesMap, errorList);
         } catch (IOException e) {
             e.printStackTrace();
@@ -398,6 +412,15 @@ class Individual {
     }
     public int getAge(){
         return calcAge(birthday);
+    }
+     private int calcAgeAtDeath(LocalDate dob, LocalDate dod){
+        LocalDate birthDate = LocalDate.parse(dob.toString());
+        LocalDate deathDate = LocalDate.parse(dod.toString());
+        this.age = Period.between(birthday, deathDate).getYears();
+        return age;
+    }
+    public int getAgeAtDeath(){
+        return calcAgeAtDeath(birthday,death);
     }
 
     public boolean isAlive(){

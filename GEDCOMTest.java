@@ -80,6 +80,19 @@ public class GEDCOMTest {
     }
 
     @Test
+    void NotTooOldTest(){
+        int test1 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1111,3,8),LocalDate(2020,1,3));
+        boolean result1 = test1 < 150
+        assertFalse(result1)
+        int test2 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1870,3,8),LocalDate(1970,1,3));
+        boolean result2 = test2 < 150
+        assertTrue(result2)
+        int test1 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1800,3,8),LocalDate(1950,1,3));
+        boolean result3 = test3 < 150
+        assertFalse(result3)
+    }
+
+    @Test
     void testUniqueIndividualID(){
         Individual indi1 = new Individual("1");
         Map<String,Individual> indimap = new TreeMap<>();
