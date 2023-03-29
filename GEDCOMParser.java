@@ -82,7 +82,7 @@ public class GEDCOMParser {
                 if(cfam == null){
                     errorList.add(String.format("Error US26: %s (%s) is a child in a family (%s) which doesn't exist in the database!",indiName,iid,isChild));
                 }else{
-                    if(!cfam.getChildern().contains(iid.toString())){
+                    if(!cfam.getChildren().contains(iid.toString())){
                         errorList.add(String.format("Error US26: %s (%s) doesn't belong in family (%s) as a child!",indiName,iid,isChild));
                     }
                 }
@@ -106,7 +106,7 @@ public class GEDCOMParser {
             Family fam = fams.get(fid);
             husbandID = fam.getHusbandID();
             wifeID = fam.getWifeID();
-            childern = fam.getChildern();
+            childern = fam.getChildren();
 
             if(indis.get(husbandID) == null){
                 errorList.add(String.format("Error US26: Husband (%s) in family (%s) does not exist in the database!", husbandID, fid));
@@ -236,7 +236,7 @@ public class GEDCOMParser {
                             break;
 
                         case "CHIL":
-                            if (currentFamily != null) currentFamily.addChildern(tokens[2]);
+                            if (currentFamily != null) currentFamily.addChildren(tokens[2]);
                             break;
 
                         case "DATE":
@@ -263,7 +263,7 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("DEAT")){
                                 currentIndividual.setDeath(inputdate);
                                 dateType = "Death";
-                                if(currentIndividual.getAgeAtDeath() < 150) tooOldFlag = false;
+                                if(currentIndividual.getAge() < 150) tooOldFlag = false;
                                 if(isBirthBeforeDeath(currentIndividual)){
                                     LocalDate birthdate = currentIndividual.getBirthday();
                                     LocalDate deathDate = (LocalDate) currentIndividual.getDeathDate();
@@ -325,10 +325,10 @@ public class GEDCOMParser {
                     }
                 }
                 preTokens = tokens;
-                 if(tooOldFlag == true){
-                errorList.add(String.format("Error US07 :Individual %s (%s) was alive for 150 or more years",currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
-                tooOldFlag = false;            
-              }
+                if(tooOldFlag == true){
+                    errorList.add(String.format("Error US07 :Individual %s (%s) was alive for 150 or more years",currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
+                    tooOldFlag = false;
+                }
                  
             }
            
@@ -351,7 +351,7 @@ public class GEDCOMParser {
         for (String fid : familiesMap.keySet()) {
             Family fam = familiesMap.get(fid);
             System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
-                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildern().toString());
+                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildren().toString());
         }
         System.out.println("Deceased:");
         listDeceased(individualsMap);
@@ -363,163 +363,5 @@ public class GEDCOMParser {
     }
 }
 
-class Individual {
-    private String id = "NA";
-    private String name = "NA";
-    private String gender = "NA";
-    private LocalDate birthday = null;
-    private int age = -1;
-    private boolean alive = true;
-    private LocalDate death = null;
-    private String isSpouse = "NA";
-    private String isChild = "NA";
-    private Family family = null;
-    private List<String> comments = new ArrayList<>();
-    public Individual(String id) {
-        this.id = id;
-    }
 
-    public String getId() {
-        return id;
-    }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getGender(){
-        return gender;
-    }
-    public void setGender(String gender){
-        this.gender = gender;
-    }
-    public LocalDate getBirthday(){
-        return birthday;
-    }
-    public void setBirthday(LocalDate dob){
-        this.birthday = dob;
-
-    }
-    private int calcAge(LocalDate dob){
-        LocalDate birthDate = LocalDate.parse(dob.toString());
-        LocalDate currDate = LocalDate.now();
-        this.age = Period.between(birthday, currDate).getYears();
-        return age;
-    }
-    public int getAge(){
-        return calcAge(birthday);
-    }
-     private int calcAgeAtDeath(LocalDate dob, LocalDate dod){
-        LocalDate birthDate = LocalDate.parse(dob.toString());
-        LocalDate deathDate = LocalDate.parse(dod.toString());
-        this.age = Period.between(birthday, deathDate).getYears();
-        return age;
-    }
-    public int getAgeAtDeath(){
-        return calcAgeAtDeath(birthday,death);
-    }
-
-    public boolean isAlive(){
-        return alive;
-    }
-
-    public Object getDeathDate() {
-        if(death != null)
-            return death;
-        else return "NA";
-    }
-
-    public void setDeath(LocalDate death){
-        this.death = death;
-        this.alive = false;
-    }
-
-    public String isSpouse(){
-        return isSpouse;
-    }
-
-    public void setSpouse(String spouse){
-        this.isSpouse = spouse;
-    }
-
-    public String isChild(){
-        return isChild;
-    }
-
-    public void setChild(String child){
-        this.isChild = child;
-    }
-
-    public Family getFamily(){
-        return this.family;
-    }
-
-    public void setFamily(Family fam){
-        this.family = fam;
-    }
-
-}
-
-class Family {
-    private String id = "NA";
-    private LocalDate married = null;
-    private LocalDate divorced = null;
-    private String husbandID = null;
-    private String wifeID = null;
-    private List<String> childrenId = new ArrayList<>();
-
-    public Family(String id) {
-        this.id = id;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getHusbandID() {
-        return husbandID;
-    }
-
-    public void setHusbandID(String husband) {
-        this.husbandID = husband;
-    }
-
-    public String getWifeID() {
-        return wifeID;
-    }
-
-    public void setWifeID(String wife) {
-        this.wifeID = wife;
-    }
-
-    public void addChildern(String ChildId) {
-        childrenId.add(ChildId);
-    }
-
-    public List getChildern(){
-        return childrenId;
-    }
-
-    public Object getMarried(){
-        if(married != null)
-            return married;
-        else return "NA";
-    }
-    public void setMarried(LocalDate married){
-        this.married = married;
-    }
-
-    public Object getDivorced(){
-        if(divorced != null)
-            return divorced;
-        else return "NA";
-    }
-    public void setDivorced(LocalDate divorced){
-        this.divorced = divorced;
-    }
-
-}

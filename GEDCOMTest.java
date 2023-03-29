@@ -23,8 +23,8 @@ public class GEDCOMTest {
     @Test
     void testBirthBeforeMarriage(){
         Individual husband = new Individual("1");
-        Individual wife = new Individual("2")
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern( tokens[2].length() < 2 ? "d MMM yyyy": "dd MMM yyyy");
+        Individual wife = new Individual("2");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy");
         LocalDate inputdate = LocalDate.parse("1 AUG 1978",formatter);
         husband.setBirthday(inputdate);
         inputdate = LocalDate.parse("1 AUG 1980",formatter);
@@ -81,15 +81,30 @@ public class GEDCOMTest {
 
     @Test
     void NotTooOldTest(){
-        int test1 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1111,3,8),LocalDate(2020,1,3));
-        boolean result1 = test1 < 150
-        assertFalse(result1)
-        int test2 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1870,3,8),LocalDate(1970,1,3));
-        boolean result2 = test2 < 150
-        assertTrue(result2)
-        int test1 = GEDCOMParser.calcAgeAtDeath(LocalDate.of(1800,3,8),LocalDate(1950,1,3));
-        boolean result3 = test3 < 150
-        assertFalse(result3)
+
+        Individual ind1 =  new Individual("I111");
+        ind1.setBirthday(LocalDate.of(1111,3,8));
+        ind1.setDeath(LocalDate.of(2020,1,3));
+
+        Individual ind2 =  new Individual("I112");
+        ind2.setBirthday(LocalDate.of(1870,3,8));
+        ind2.setDeath(LocalDate.of(1970,1,3));
+
+        Individual ind3 =  new Individual("I113");
+        ind3.setBirthday(LocalDate.of(1800,3,8));
+        ind3.setDeath(LocalDate.of(1950,1,3));
+
+        int test1 = ind1.getAge();
+        boolean result1 = test1 < 150;
+        assertFalse(result1);
+
+        int test2 = ind2.getAge();
+        boolean result2 = test2 < 150;
+        assertTrue(result2);
+
+        int test3 = ind3.getAge();
+        boolean result3 = test3 < 150;
+        assertFalse(result3);
     }
 
     @Test
