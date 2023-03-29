@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -10,6 +11,14 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isGenderCorrect(Individual ind, String expGender,ArrayList<String> errorList){
+        if(!ind.getGender().equals(expGender)){
+            String err21 = String.format("Error US21: %s (%s) in family (%s) should be %s.",(expGender == "M" ? "Husband": "Wife"),ind.getId(), ind.getFamily().getId(), (expGender == "M"? "male":"female"));
+            errorList.add(err21);
+            return false;
+        }
+        return true;
+    }
     public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam){
         Individual husband = indiMap.get(fam.getHusbandID());
         Individual wife = indiMap.get(fam.getWifeID());
@@ -122,21 +131,26 @@ public class GEDCOMParser {
             }
         }
     }
-    private static boolean isValidDate(String day, String month, String year){
+    public static boolean isValidDate(String day, String month, String year){
         Pattern dpattern = Pattern.compile("^\\d{1,2}$");
         Pattern ypattern = Pattern.compile("^\\d{4,4}$");
         Pattern mpattern = Pattern.compile("^[a-zA-Z]{3,3}$");
-        HashMap<String, Integer> months = new HashMap<>() {{put("JAN", 31);put("FEB", 28);put("MAR", 31);
-            put("APR", 30);put("MAY", 31);put("JUN", 30);put("JUL", 31);put("AUG", 31);put("SEP", 30);
-            put("OCT", 31);put("NOV", 30);put("DEC", 31);
+
+
+        HashMap<String, Integer> months = new HashMap<>() {{put("JAN", 1);put("FEB", 2);put("MAR", 3);
+            put("APR", 4);put("MAY", 5);put("JUN", 6);put("JUL", 7);put("AUG", 8);put("SEP", 9);
+            put("OCT", 10);put("NOV", 11);put("DEC", 12);
         }};
 
         if(!dpattern.matcher(day).matches()) return false;
         if(!ypattern.matcher(year).matches()) return false;
         if(!mpattern.matcher(month).matches()) return false;
 
+        YearMonth yearMonthObject = YearMonth.of(Integer.parseInt(year), months.get(month.toUpperCase()));
+        int daysInMonth = yearMonthObject.lengthOfMonth();
+
         if(months.get(month.toUpperCase()) != null){
-            if(!(Integer.parseInt(day)>0 && Integer.parseInt(day) <= months.get(month.toUpperCase()))){
+            if(!(Integer.parseInt(day)>0 && Integer.parseInt(day) <= daysInMonth)){
                 return false;
             }
         }else{
@@ -223,15 +237,21 @@ public class GEDCOMParser {
 
                         case "HUSB":
                             if (currentFamily != null){
-                                 currentFamily.setHusbandID(tokens[2]);
-                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
+                                Individual husband;
+                                currentFamily.setHusbandID(tokens[2]);
+                                husband = individualsMap.get(tokens[2]);
+                                husband.setFamily(currentFamily);
+                                isGenderCorrect(husband, "M",errorList);
                             }
                             break;
 
                         case "WIFE":
                             if (currentFamily != null){
-                                 currentFamily.setWifeID(tokens[2]);
-                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
+                                Individual wife;
+                                currentFamily.setWifeID(tokens[2]);
+                                wife = individualsMap.get(tokens[2]);
+                                wife.setFamily(currentFamily);
+                                isGenderCorrect(wife, "F",errorList);
                             }
                             break;
 
@@ -246,7 +266,7 @@ public class GEDCOMParser {
                             String year = tokens[4];
                             String dateStr = day + " "+ month +" "+ year;
                             if(!isValidDate(day, month, year)){
-                                errorList.add(String.format("Error US01: Entered invalid date (%s) for %s (%s)", dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
+                                errorList.add(String.format("Error US42: Entered invalid date (%s) for %s (%s)", dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
                             }
                             DateTimeFormatter formatter = DateTimeFormatter.ofPattern( tokens[2].length() < 2 ? "d MMM yyyy": "dd MMM yyyy");
                             LocalDate currDate = LocalDate.now();

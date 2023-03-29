@@ -3,9 +3,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.runners.Suite;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 @Suite.SuiteClasses(GEDCOMTest.class)
@@ -140,5 +138,41 @@ public class GEDCOMTest {
         assertFalse(result3);
     }
 
+    @Test
+    void testInvalidDates(){
+        boolean isvalid;
+        isvalid = GEDCOMParser.isValidDate("29","FEB","2000");
+        assertTrue(isvalid);
+        isvalid = GEDCOMParser.isValidDate("29","FEB","2001");
+        assertFalse(isvalid);
+        isvalid = GEDCOMParser.isValidDate("32","JAN","2001");
+        assertFalse(isvalid);
+        isvalid = GEDCOMParser.isValidDate("0","JAN","2001");
+        assertFalse(isvalid);
+        isvalid = GEDCOMParser.isValidDate("1","JAN","2001");
+        assertTrue(isvalid);
+    }
+
+    @Test
+    void testGender(){
+        boolean isvalidGender;
+        Family fam = new Family("fam");
+        Individual husband = new Individual("test");
+        husband.setFamily(fam);
+        Individual wife = new Individual("test2");
+        wife.setFamily(fam);
+        husband.setGender("M");
+        isvalidGender = GEDCOMParser.isGenderCorrect(husband, "M",new ArrayList<>());
+        assertTrue(isvalidGender);
+        husband.setGender("F");
+        isvalidGender = GEDCOMParser.isGenderCorrect(husband, "M",new ArrayList<>());
+        assertFalse(isvalidGender);
+        wife.setGender("F");
+        isvalidGender = GEDCOMParser.isGenderCorrect(wife, "F",new ArrayList<>());
+        assertTrue(isvalidGender);
+        wife.setGender("M");
+        isvalidGender = GEDCOMParser.isGenderCorrect(wife, "F",new ArrayList<>());
+        assertFalse(isvalidGender);
+    }
 
 }
