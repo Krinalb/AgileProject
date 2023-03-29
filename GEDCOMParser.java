@@ -12,14 +12,14 @@ public class GEDCOMParser {
 
     public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam){
         Individual husband = indiMap.get(fam.getHusbandID());
-            Individual wife = indiMap.get(fam.getWifeID());
-            LocalDate hbd = husband.getBirthday();
-            LocalDate wbd = wife.getBirthday();
-            LocalDate marrDate = (LocalDate) fam.getMarried();
+        Individual wife = indiMap.get(fam.getWifeID());
+        LocalDate hbd = husband.getBirthday();
+        LocalDate wbd = wife.getBirthday();
+        LocalDate marrDate = (LocalDate) fam.getMarried();
             
-            if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
-                return false;
-            }
+        if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
+            return false;
+        }
         return true;
     }
 

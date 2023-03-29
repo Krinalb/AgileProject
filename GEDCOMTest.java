@@ -22,26 +22,29 @@ public class GEDCOMTest {
     }
     @Test
     void testBirthBeforeMarriage(){
-        Individual husband = new Individual("1");
-        Individual wife = new Individual("2");
+        Map<String,Individual> indimap = new TreeMap<>();
+        Individual husband = new Individual("I1");
+        Individual wife = new Individual("I2");
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy");
-        LocalDate inputdate = LocalDate.parse("1 AUG 1978",formatter);
+        LocalDate inputdate = LocalDate.parse("1 Aug 1978",formatter);
         husband.setBirthday(inputdate);
-        inputdate = LocalDate.parse("1 AUG 1980",formatter);
+        indimap.put("I1", husband);
+        inputdate = LocalDate.parse("1 Aug 1980",formatter);
         wife.setBirthday(inputdate);
-         Map<String,Individual> indimap = new TreeMap<>();
+        indimap.put("I2", wife);
+
         Family fam = new Family("1");
-        fam.setHusbandID("1");
-        fam.setWifeID("2");
-        inputdate = LocalDate.parse("1 AUG 2000",formatter);
+        fam.setHusbandID("I1");
+        fam.setWifeID("I2");
+        inputdate = LocalDate.parse("1 Aug 2000",formatter);
         fam.setMarried(inputdate);
         boolean result1 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
         assertTrue(result1);
-        inputdate = LocalDate.parse("1 AUG 1979",formatter);
+        inputdate = LocalDate.parse("1 Aug 1979",formatter);
         fam.setMarried(inputdate);
         boolean result2 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
         assertFalse(result2);
-        inputdate = LocalDate.parse("1 AUG 1960",formatter);
+        inputdate = LocalDate.parse("1 Aug 1960",formatter);
         fam.setMarried(inputdate);
         boolean result3 = GEDCOMParser.isBirthBeforeMarriage(indimap,fam);
         assertFalse(result3);
@@ -104,7 +107,7 @@ public class GEDCOMTest {
 
         int test3 = ind3.getAge();
         boolean result3 = test3 < 150;
-        assertFalse(result3);
+        assertTrue(result3);
     }
 
     @Test
