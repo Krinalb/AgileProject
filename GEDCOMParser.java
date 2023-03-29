@@ -3,32 +3,62 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.Period;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.regex.Pattern;
 
 public class GEDCOMParser {
-
-    public static boolean isGenderCorrect(Individual ind, String expGender,ArrayList<String> errorList){
-        if(!ind.getGender().equals(expGender)){
-            String err21 = String.format("Error US21: %s (%s) in family (%s) should be %s.",(expGender == "M" ? "Husband": "Wife"),ind.getId(), ind.getFamily().getId(), (expGender == "M"? "male":"female"));
-            errorList.add(err21);
-            return false;
-        }
-        return true;
-    }
-    public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam){
+    
+    public static boolean isDivorceBeforeDeath(Map<String, Individual> indiMap, Family fam) {
+        // Get husband and wife objects from individual map
         Individual husband = indiMap.get(fam.getHusbandID());
         Individual wife = indiMap.get(fam.getWifeID());
+    
+        // Get death dates and divorce date
+        LocalDate hdd = husband.getDeathDate();
+        LocalDate wdd = wife.getDeathDate();
+        LocalDate divDate = (LocalDate) fam.getDivorced();
+    
+        // Check if divorce date is before either death date
+        if (divDate.isBefore(hdd) || divDate.isBefore(wdd)) {
+            return false;
+        }
+    
+        // Return true if divorce date is after both death dates or individuals are alive
+        return hdd == null && wdd == null || divDate.isAfter(hdd) && divDate.isAfter(wdd);
+    }
+    
+
+    public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam) {
+        // Get husband and wife objects from individual map
+        Individual husband = indiMap.get(fam.getHusbandID());
+        Individual wife = indiMap.get(fam.getWifeID());
+    
+        // Get birth dates and marriage date
         LocalDate hbd = husband.getBirthday();
         LocalDate wbd = wife.getBirthday();
         LocalDate marrDate = (LocalDate) fam.getMarried();
-            
-        if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
+    
+        // Check if marriage date is before either birth date
+        if (marrDate.isBefore(hbd) || marrDate.isBefore(wbd)) {
             return false;
         }
+    
+        // Return true if marriage date is after both birth dates
+        return true;
+    }
+    
+    public static boolean isBirthBeforeMarriage(Map<String, Individual> indiMap, Family fam){
+        Individual husband = indiMap.get(fam.getHusbandID());
+            Individual wife = indiMap.get(fam.getWifeID());
+            LocalDate hbd = husband.getBirthday();
+            LocalDate wbd = wife.getBirthday();
+            LocalDate marrDate = (LocalDate) fam.getMarried();
+            
+            if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
+                return false;
+            }
         return true;
     }
 
@@ -91,7 +121,7 @@ public class GEDCOMParser {
                 if(cfam == null){
                     errorList.add(String.format("Error US26: %s (%s) is a child in a family (%s) which doesn't exist in the database!",indiName,iid,isChild));
                 }else{
-                    if(!cfam.getChildren().contains(iid.toString())){
+                    if(!cfam.getChildern().contains(iid.toString())){
                         errorList.add(String.format("Error US26: %s (%s) doesn't belong in family (%s) as a child!",indiName,iid,isChild));
                     }
                 }
@@ -115,7 +145,7 @@ public class GEDCOMParser {
             Family fam = fams.get(fid);
             husbandID = fam.getHusbandID();
             wifeID = fam.getWifeID();
-            childern = fam.getChildren();
+            childern = fam.getChildern();
 
             if(indis.get(husbandID) == null){
                 errorList.add(String.format("Error US26: Husband (%s) in family (%s) does not exist in the database!", husbandID, fid));
@@ -131,26 +161,21 @@ public class GEDCOMParser {
             }
         }
     }
-    public static boolean isValidDate(String day, String month, String year){
+    private static boolean isValidDate(String day, String month, String year){
         Pattern dpattern = Pattern.compile("^\\d{1,2}$");
         Pattern ypattern = Pattern.compile("^\\d{4,4}$");
         Pattern mpattern = Pattern.compile("^[a-zA-Z]{3,3}$");
-
-
-        HashMap<String, Integer> months = new HashMap<>() {{put("JAN", 1);put("FEB", 2);put("MAR", 3);
-            put("APR", 4);put("MAY", 5);put("JUN", 6);put("JUL", 7);put("AUG", 8);put("SEP", 9);
-            put("OCT", 10);put("NOV", 11);put("DEC", 12);
+        HashMap<String, Integer> months = new HashMap<>() {{put("JAN", 31);put("FEB", 28);put("MAR", 31);
+            put("APR", 30);put("MAY", 31);put("JUN", 30);put("JUL", 31);put("AUG", 31);put("SEP", 30);
+            put("OCT", 31);put("NOV", 30);put("DEC", 31);
         }};
 
         if(!dpattern.matcher(day).matches()) return false;
         if(!ypattern.matcher(year).matches()) return false;
         if(!mpattern.matcher(month).matches()) return false;
 
-        YearMonth yearMonthObject = YearMonth.of(Integer.parseInt(year), months.get(month.toUpperCase()));
-        int daysInMonth = yearMonthObject.lengthOfMonth();
-
         if(months.get(month.toUpperCase()) != null){
-            if(!(Integer.parseInt(day)>0 && Integer.parseInt(day) <= daysInMonth)){
+            if(!(Integer.parseInt(day)>0 && Integer.parseInt(day) <= months.get(month.toUpperCase()))){
                 return false;
             }
         }else{
@@ -237,26 +262,20 @@ public class GEDCOMParser {
 
                         case "HUSB":
                             if (currentFamily != null){
-                                Individual husband;
-                                currentFamily.setHusbandID(tokens[2]);
-                                husband = individualsMap.get(tokens[2]);
-                                husband.setFamily(currentFamily);
-                                isGenderCorrect(husband, "M",errorList);
+                                 currentFamily.setHusbandID(tokens[2]);
+                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
                             }
                             break;
 
                         case "WIFE":
                             if (currentFamily != null){
-                                Individual wife;
-                                currentFamily.setWifeID(tokens[2]);
-                                wife = individualsMap.get(tokens[2]);
-                                wife.setFamily(currentFamily);
-                                isGenderCorrect(wife, "F",errorList);
+                                 currentFamily.setWifeID(tokens[2]);
+                                 individualsMap.get(tokens[2]).setFamily(currentFamily);
                             }
                             break;
 
                         case "CHIL":
-                            if (currentFamily != null) currentFamily.addChildren(tokens[2]);
+                            if (currentFamily != null) currentFamily.addChildern(tokens[2]);
                             break;
 
                         case "DATE":
@@ -266,7 +285,7 @@ public class GEDCOMParser {
                             String year = tokens[4];
                             String dateStr = day + " "+ month +" "+ year;
                             if(!isValidDate(day, month, year)){
-                                errorList.add(String.format("Error US42: Entered invalid date (%s) for %s (%s)", dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
+                                errorList.add(String.format("Error US01: Entered invalid date (%s) for %s (%s)", dateStr,currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
                             }
                             DateTimeFormatter formatter = DateTimeFormatter.ofPattern( tokens[2].length() < 2 ? "d MMM yyyy": "dd MMM yyyy");
                             LocalDate currDate = LocalDate.now();
@@ -283,7 +302,7 @@ public class GEDCOMParser {
                             if (preTokens[1].equals("DEAT")){
                                 currentIndividual.setDeath(inputdate);
                                 dateType = "Death";
-                                if(currentIndividual.getAge() < 150) tooOldFlag = false;
+                                if(currentIndividual.getAgeAtDeath() < 150) tooOldFlag = false;
                                 if(isBirthBeforeDeath(currentIndividual)){
                                     LocalDate birthdate = currentIndividual.getBirthday();
                                     LocalDate deathDate = (LocalDate) currentIndividual.getDeathDate();
@@ -345,10 +364,10 @@ public class GEDCOMParser {
                     }
                 }
                 preTokens = tokens;
-                if(tooOldFlag == true){
-                    errorList.add(String.format("Error US07 :Individual %s (%s) was alive for 150 or more years",currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
-                    tooOldFlag = false;
-                }
+                 if(tooOldFlag == true){
+                errorList.add(String.format("Error US07 :Individual %s (%s) was alive for 150 or more years",currentIndividual.getName().replace("/", ""),currentIndividual.getId()));
+                tooOldFlag = false;            
+              }
                  
             }
            
@@ -371,7 +390,7 @@ public class GEDCOMParser {
         for (String fid : familiesMap.keySet()) {
             Family fam = familiesMap.get(fid);
             System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
-                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildren().toString());
+                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildern().toString());
         }
         System.out.println("Deceased:");
         listDeceased(individualsMap);
@@ -383,5 +402,163 @@ public class GEDCOMParser {
     }
 }
 
+class Individual {
+    private String id = "NA";
+    private String name = "NA";
+    private String gender = "NA";
+    private LocalDate birthday = null;
+    private int age = -1;
+    private boolean alive = true;
+    private LocalDate death = null;
+    private String isSpouse = "NA";
+    private String isChild = "NA";
+    private Family family = null;
+    private List<String> comments = new ArrayList<>();
+    public Individual(String id) {
+        this.id = id;
+    }
 
+    public String getId() {
+        return id;
+    }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getGender(){
+        return gender;
+    }
+    public void setGender(String gender){
+        this.gender = gender;
+    }
+    public LocalDate getBirthday(){
+        return birthday;
+    }
+    public void setBirthday(LocalDate dob){
+        this.birthday = dob;
+
+    }
+    private int calcAge(LocalDate dob){
+        LocalDate birthDate = LocalDate.parse(dob.toString());
+        LocalDate currDate = LocalDate.now();
+        this.age = Period.between(birthday, currDate).getYears();
+        return age;
+    }
+    public int getAge(){
+        return calcAge(birthday);
+    }
+     private int calcAgeAtDeath(LocalDate dob, LocalDate dod){
+        LocalDate birthDate = LocalDate.parse(dob.toString());
+        LocalDate deathDate = LocalDate.parse(dod.toString());
+        this.age = Period.between(birthday, deathDate).getYears();
+        return age;
+    }
+    public int getAgeAtDeath(){
+        return calcAgeAtDeath(birthday,death);
+    }
+
+    public boolean isAlive(){
+        return alive;
+    }
+
+    public Object getDeathDate() {
+        if(death != null)
+            return death;
+        else return "NA";
+    }
+
+    public void setDeath(LocalDate death){
+        this.death = death;
+        this.alive = false;
+    }
+
+    public String isSpouse(){
+        return isSpouse;
+    }
+
+    public void setSpouse(String spouse){
+        this.isSpouse = spouse;
+    }
+
+    public String isChild(){
+        return isChild;
+    }
+
+    public void setChild(String child){
+        this.isChild = child;
+    }
+
+    public Family getFamily(){
+        return this.family;
+    }
+
+    public void setFamily(Family fam){
+        this.family = fam;
+    }
+
+}
+
+class Family {
+    private String id = "NA";
+    private LocalDate married = null;
+    private LocalDate divorced = null;
+    private String husbandID = null;
+    private String wifeID = null;
+    private List<String> childrenId = new ArrayList<>();
+
+    public Family(String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getHusbandID() {
+        return husbandID;
+    }
+
+    public void setHusbandID(String husband) {
+        this.husbandID = husband;
+    }
+
+    public String getWifeID() {
+        return wifeID;
+    }
+
+    public void setWifeID(String wife) {
+        this.wifeID = wife;
+    }
+
+    public void addChildern(String ChildId) {
+        childrenId.add(ChildId);
+    }
+
+    public List getChildern(){
+        return childrenId;
+    }
+
+    public Object getMarried(){
+        if(married != null)
+            return married;
+        else return "NA";
+    }
+    public void setMarried(LocalDate married){
+        this.married = married;
+    }
+
+    public Object getDivorced(){
+        if(divorced != null)
+            return divorced;
+        else return "NA";
+    }
+    public void setDivorced(LocalDate divorced){
+        this.divorced = divorced;
+    }
+
+}
