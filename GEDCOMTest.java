@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Suite.SuiteClasses(GEDCOMTest.class)
 public class GEDCOMTest {
 
+
     @Test
     void testCurrDateBeforeNow(){
         boolean result1 = GEDCOMParser.isInputDateValid(LocalDate.of(2000, 2, 18));
