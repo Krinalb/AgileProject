@@ -11,6 +11,32 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isDivorceBeforeDeath(Map<String, Individual> indiMap, Family fam) {
+        // Get husband and wife objects from individual map
+        Individual husband = indiMap.get(fam.getHusbandID());
+        Individual wife = indiMap.get(fam.getWifeID());
+
+        // Get death dates and divorce date
+        if(fam.getDivorced() != "NA"){
+            LocalDate divDate = (LocalDate) fam.getDivorced();
+            if(husband.getDeathDate() != "NA") {
+                LocalDate hdd = (LocalDate) husband.getDeathDate();
+                if (divDate.isAfter(hdd)) {
+                    return false;
+                }
+            }
+            if(wife.getDeathDate() != "NA") {
+                LocalDate wdd = (LocalDate) wife.getDeathDate();
+                if (divDate.isAfter(wdd)) {
+                    return false;
+                }
+            }
+
+        }
+        return true;
+    }
+
+
     public static void listSingleOverThirty(Map<String, Individual> individualMap){
         for(String iid: individualMap.keySet()){
             Individual indiv= individualMap.get(iid);
@@ -45,8 +71,7 @@ public class GEDCOMParser {
         LocalDate hbd = husband.getBirthday();
         LocalDate wbd = wife.getBirthday();
         LocalDate marrDate = (LocalDate) fam.getMarried();
-            
-        if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd)){
+        if(marrDate.isBefore(hbd) || marrDate.isBefore(wbd) || marrDate.isEqual(hbd) || marrDate.isEqual(wbd)){
             return false;
         }
         return true;
@@ -318,6 +343,12 @@ public class GEDCOMParser {
                                     LocalDate marrdate = (LocalDate) currentFamily.getMarried();
                                     LocalDate divDate = (LocalDate) currentFamily.getDivorced();
                                     errorList.add(String.format("Error US04: Married date (%s) of Husband = %s and Wife = %s should occur before divorced date (%s) of an individual", marrdate.toString(), currentFamily.getHusbandID(), currentFamily.getWifeID(), divDate.toString()));
+                                }
+                                if(!isDivorceBeforeDeath(individualsMap,currentFamily)){
+                                    Individual husband = individualsMap.get(currentFamily.getHusbandID());
+                                    Individual wife = individualsMap.get(currentFamily.getWifeID());
+                                    errorList.add(String.format("Error US06: DIVORCED AFTER DEATH - FamilyID = {%s}, Husband = {%s}, HusbandID = {%s}, Husband-brirthdate = {%s}, Wife = {%s}, WifeID = {%s}, Wife-birthdate = {%s}, Marriage-Date = {%s}",currentFamily.getId(), husband.getName(), husband.getId(), husband.getBirthday().toString(), wife.getName(), wife.getId(), wife.getBirthday(), currentFamily.getMarried()));
+
                                 }
                             }
 

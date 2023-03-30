@@ -1,4 +1,5 @@
 import junit.framework.TestSuite;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.runners.Suite;
 import java.time.format.DateTimeFormatter;
@@ -181,11 +182,11 @@ public class GEDCOMTest {
         // Create individual objects
         Individual husband = new Individual("H1");
         husband.setName("John Doe");
-        husband.setGender(Gender.MALE);
+        husband.setGender("M");
         husband.setBirthday(LocalDate.of(1980, 1, 1));
         Individual wife = new Individual("W1");
         wife.setName("Jane Smith");
-        wife.setGender(Gender.FEMALE);
+        wife.setGender("F");
         wife.setBirthday(LocalDate.of(1985, 1, 1));
 
         // Create family object
@@ -200,16 +201,16 @@ public class GEDCOMTest {
         indiMap.put(wife.getId(), wife);
 
         // Test if marriage date is after both birth dates
-        assertTrue(FamilyTree.isBirthBeforeMarriage(indiMap, fam));
+        assertTrue(GEDCOMParser.isBirthBeforeMarriage(indiMap, fam));
 
         // Test if marriage date is before husband's birth date
         husband.setBirthday(LocalDate.of(2010, 1, 1));
-        assertFalse(FamilyTree.isBirthBeforeMarriage(indiMap, fam));
+        assertFalse(GEDCOMParser.isBirthBeforeMarriage(indiMap, fam));
 
         // Test if marriage date is before wife's birth date
         husband.setBirthday(LocalDate.of(1980, 1, 1));
         wife.setBirthday(LocalDate.of(2010, 1, 1));
-        assertFalse(FamilyTree.isBirthBeforeMarriage(indiMap, fam));
+        assertFalse(GEDCOMParser.isBirthBeforeMarriage(indiMap, fam));
     }
     
     @Test
@@ -219,8 +220,8 @@ public class GEDCOMTest {
         Individual wife = new Individual("Wife");
 
         // Set husband's death date to null and wife's death date to a future date
-        husband.setDeathDate(null);
-        wife.setDeathDate(LocalDate.of(2030, 1, 1));
+        husband.setDeath(null);
+        wife.setDeath(LocalDate.of(2030, 1, 1));
 
         // Create family object and set divorce date to a past date
         Family family = new Family("1");
@@ -234,13 +235,13 @@ public class GEDCOMTest {
         indiMap.put(wife.getId(), wife);
 
         // Test that isDivorceBeforeDeath returns true
-        Assertions.assertTrue(Family.isDivorceBeforeDeath(indiMap, family));
+        Assertions.assertTrue(GEDCOMParser.isDivorceBeforeDeath(indiMap, family));
 
         // Set husband's death date to a past date
-        husband.setDeathDate(LocalDate.of(2010, 1, 1));
+        husband.setDeath(LocalDate.of(2010, 1, 1));
 
         // Test that isDivorceBeforeDeath returns false
-        Assertions.assertFalse(Family.isDivorceBeforeDeath(indiMap, family));
+        Assertions.assertFalse(GEDCOMParser.isDivorceBeforeDeath(indiMap, family));
     }
 
 }
