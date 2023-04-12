@@ -176,6 +176,21 @@ public class GEDCOMParser {
             }
         }
     }
+    public static boolean isBornBeforeParentsDeath(Individual child, Individual hus, Individual wif,ArrayList<String> errorList ){
+        if(hus.getDeathDate() != "NA"){
+            if(!child.getBirthday().isBefore(((LocalDate) hus.getDeathDate()).minusMonths(9))){
+                errorList.add(String.format("Error US09: Child (%s) is born after their father's(%s) death!", child.getId(),hus.getId()));
+                return false;
+            }
+        }
+        if(wif.getDeathDate() != "NA"){
+            if(!child.getBirthday().isBefore((LocalDate)wif.getDeathDate())){
+                errorList.add(String.format("Error US09: Child (%s) is born after their Mothers's(%s) death!", child.getId(),wif.getId()));
+                return false;
+            }
+        }
+        return true;
+    }
     public static boolean isValidDate(String day, String month, String year){
         Pattern dpattern = Pattern.compile("^\\d{1,2}$");
         Pattern ypattern = Pattern.compile("^\\d{4,4}$");
@@ -414,6 +429,9 @@ public class GEDCOMParser {
         System.out.println("Individuals:");
         for (String iid : individualsMap.keySet()) {
             Individual indiv = individualsMap.get(iid);
+            if(indiv.isChild() !="NA"){
+                isBornBeforeParentsDeath(indiv, individualsMap.get(familiesMap.get(indiv.isChild()).getHusbandID()), individualsMap.get(familiesMap.get(indiv.isChild()).getWifeID()), errorList);
+            }
             System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
                     iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
         }

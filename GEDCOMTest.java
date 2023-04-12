@@ -20,6 +20,39 @@ public class GEDCOMTest {
         boolean result3 = GEDCOMParser.isInputDateValid(LocalDate.of(2023, 4, 3));
         assertFalse(result3);
     }
+
+    @Test
+    void testBornBeforeParentsDeath(){
+        ArrayList<String> erroList = new ArrayList<String>();
+        Individual husband = new Individual("I1");
+        Individual wife = new Individual("I2");
+        Individual child = new Individual("I3");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy");
+        LocalDate inputdate = LocalDate.parse("1 Aug 2005",formatter);
+        child.setBirthday(inputdate);
+        
+        
+        inputdate = LocalDate.parse("1 Aug 2005",formatter);
+        husband.setDeath(inputdate);
+        inputdate = LocalDate.parse("1 Aug 2020",formatter);
+        wife.setDeath(inputdate);
+        boolean result1 = GEDCOMParser.isBornBeforeParentsDeath(child,husband,wife,erroList);
+        assertTrue(result1);
+
+        inputdate = LocalDate.parse("1 Aug 2004",formatter);
+        husband.setDeath(inputdate);
+        inputdate = LocalDate.parse("1 Aug 2020",formatter);
+        wife.setDeath(inputdate);
+        boolean result2 = GEDCOMParser.isBornBeforeParentsDeath(child,husband,wife,erroList);
+        assertFalse(result2);
+       
+        inputdate = LocalDate.parse("1 Aug 2007",formatter);
+        husband.setDeath(inputdate);
+        inputdate = LocalDate.parse("1 Aug 2003",formatter);
+        wife.setDeath(inputdate);
+        boolean result3 = GEDCOMParser.isBornBeforeParentsDeath(child,husband,wife,erroList);
+        assertFalse(result3);
+    }
     @Test
     void testBirthBeforeMarriage(){
         Map<String,Individual> indimap = new TreeMap<>();
