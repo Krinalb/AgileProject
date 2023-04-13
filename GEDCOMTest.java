@@ -277,4 +277,32 @@ public class GEDCOMTest {
         Assertions.assertFalse(GEDCOMParser.isDivorceBeforeDeath(indiMap, family));
     }
 
+    @Test
+    public void isLastNameCorrect() {
+        Individual ch1 = new Individual("I1");
+        Individual ch2 = new Individual("I2");
+        Individual hus = new Individual("I3");
+        Individual wife = new Individual("I4");
+        ch1.setName("Jay /James/");
+        ch2.setName("Jai /James/");
+        hus.setName("Leo /James/");
+        wife.setName("Lora /Neo/");
+        ch1.setGender("M");
+        ch2.setGender("M");
+        hus.setGender("M");
+        wife.setGender("F");
+        Map<String, Individual> indiMap = new HashMap<>();
+        indiMap.put("I1", ch1);
+        indiMap.put("I2", ch2);
+        indiMap.put("I3", hus);
+        indiMap.put("I4", wife);
+
+        Family fam = new Family("F1");
+        fam.setHusbandID("I3");
+        fam.setHusbandID("I4");
+        ch1.setFamily(fam);
+        ch2.setFamily(fam);
+        assertTrue(GEDCOMParser.isLastNameSameInFamily(indiMap,fam));
+
+    }
 }
