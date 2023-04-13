@@ -78,6 +78,44 @@ public class GEDCOMParser {
         return true;
     }
 
+    public static void listUpcomingBirthdays(Map<String, Individual> individualMap){
+        LocalDate currentDate = LocalDate.now();
+      
+        for(String iid: individualMap.keySet()){
+            Individual indiv= individualMap.get(iid);
+            LocalDate birthday = indiv.getBirthday().withYear(2023);
+
+            
+            if(currentDate.isBefore(birthday)){
+                long daysBtn = ChronoUnit.DAYS.between(currentDate, birthday);
+                if(daysBtn <=30){
+                System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                        iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+                    }   
+                }
+        }
+    }
+
+    public static void listUpcomingAnniversaries(Map<String, Family> familyMap, Map<String, Individual> individualsMap){
+        LocalDate currentDate = LocalDate.now();
+      
+        for(String fid: familyMap.keySet()){
+            Family fam= familyMap.get(fid);
+            LocalDate anni = (LocalDate) fam.getMarried();
+            anni = anni.withYear(2023);
+
+            
+            if(currentDate.isBefore(anni)){
+                long daysBtn = ChronoUnit.DAYS.between(currentDate, anni);
+                if(daysBtn <=30){
+                
+                    System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
+                    fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildren().toString());                   }   
+                }
+        }
+    }
+
+
 
     public static void listSingleOverThirty(Map<String, Individual> individualMap){
         for(String iid: individualMap.keySet()){
@@ -495,6 +533,13 @@ public class GEDCOMParser {
 
         System.out.println("\nUS31: Single who is alive, over 30, and never married before:");
         listSingleOverThirty(individualsMap);
+
+        System.out.println("\nUS38:List upcoming birthdays:");
+        listUpcomingBirthdays(individualsMap);
+
+        System.out.println("\nUS39: List upcoming anniversaries:");
+        listUpcomingAnniversaries(familiesMap,individualsMap);
+
 
         for(String famID: familiesMap.keySet()){
             if(!isLastNameSameInFamily(individualsMap, familiesMap.get(famID))){
