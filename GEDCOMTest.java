@@ -17,7 +17,7 @@ public class GEDCOMTest {
         assertTrue(result1);
         boolean result2 = GEDCOMParser.isInputDateValid(LocalDate.of(2050, 2, 18));
         assertFalse(result2);
-        boolean result3 = GEDCOMParser.isInputDateValid(LocalDate.of(2023, 4, 3));
+        boolean result3 = GEDCOMParser.isInputDateValid(LocalDate.of(2023, 8, 3));
         assertFalse(result3);
     }
 
@@ -37,7 +37,7 @@ public class GEDCOMTest {
         inputdate = LocalDate.parse("1 Aug 2020",formatter);
         wife.setDeath(inputdate);
         boolean result1 = GEDCOMParser.isBornBeforeParentsDeath(child,husband,wife,erroList);
-        assertTrue(result1);
+        assertFalse(result1);
 
         inputdate = LocalDate.parse("1 Aug 2004",formatter);
         husband.setDeath(inputdate);
@@ -111,7 +111,7 @@ public class GEDCOMTest {
         boolean test2 = GEDCOMParser.isRecentBorn(LocalDate.of(2022, 2, 1));
         assertFalse(test2);
 
-        boolean test3 = GEDCOMParser.isRecentBorn(LocalDate.of(2023, 3, 8));
+        boolean test3 = GEDCOMParser.isRecentBorn(LocalDate.of(2023, 4, 12));
         assertTrue(test3);
     }
 

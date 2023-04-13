@@ -11,6 +11,48 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isLastNameSameInFamily(Map<String, Individual> indiMap, Family fam){
+        String chLastName;
+        String husLastName = indiMap.get(fam.getHusbandID()).getName().split("/")[1];
+        for(String cID: fam.getChildren()){
+            Individual child = indiMap.get(cID);
+            if(child.getGender() != "M") continue;
+            chLastName = child.getName().split("/")[1];
+            if(!husLastName.toLowerCase().equals(chLastName.toLowerCase())){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean isBirthBeforeMarriageOfParents(Individual indi){
+        Family fam = indi.getFamily();
+        LocalDate marrDate = null;
+        if(fam != null){
+            marrDate = (LocalDate) fam.getMarried();
+        }else{
+            return false;
+        }
+
+        LocalDate bday = (LocalDate) indi.getBirthday();
+
+
+        if(bday.isAfter(marrDate)){
+            return false;
+        }
+
+        if(!fam.getDivorced().toString().equals("NA")){
+            LocalDate divDate = (LocalDate) fam.getDivorced();
+            System.out.println(divDate.toString());
+            LocalDate divDateAfterNineMonths = divDate.plusMonths(9);
+            if(bday.isBefore(divDateAfterNineMonths)) return false;
+        }
+
+        return true;
+
+
+    }
+
     public static boolean isDivorceBeforeDeath(Map<String, Individual> indiMap, Family fam) {
         // Get husband and wife objects from individual map
         Individual husband = indiMap.get(fam.getHusbandID());
@@ -316,7 +358,10 @@ public class GEDCOMParser {
                             break;
 
                         case "CHIL":
-                            if (currentFamily != null) currentFamily.addChildren(tokens[2]);
+                            if (currentFamily != null){
+                                currentFamily.addChildren(tokens[2]);
+                                individualsMap.get(tokens[2]).setFamily(currentFamily);
+                            };
                             break;
 
                         case "DATE":
@@ -451,6 +496,21 @@ public class GEDCOMParser {
         System.out.println("\nUS31: Single who is alive, over 30, and never married before:");
         listSingleOverThirty(individualsMap);
 
+        for(String famID: familiesMap.keySet()){
+            if(!isLastNameSameInFamily(individualsMap, familiesMap.get(famID))){
+                errorList.add(String.format("Error US16: All male members of a family (%s)  must have the same last name",famID));
+            }
+        }
+        for(String iID: individualsMap.keySet()){
+            Individual indi = individualsMap.get(iID);
+            if(indi.isChild().equals("NA")) {
+                continue;
+            };
+
+            if(isBirthBeforeMarriageOfParents(indi)){
+                errorList.add(String.format("Error US08: Children (%s) should be born after marriage of parents (and not more than 9 months after their divorce))", iID));
+            }
+        }
         System.out.println("\nErrors and Anomalies:");
         for(String err: errorList){
             System.out.println(err);
