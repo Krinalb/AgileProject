@@ -116,6 +116,37 @@ public class GEDCOMParser {
     }
 
 
+    public static void parentsTooOld(Family fam, Map<String,Individual> individualMap,ArrayList<String> errorList){
+        Individual hus = individualMap.get(fam.getHusbandID());
+        Individual wif = individualMap.get(fam.getWifeID());
+        for(String iid: fam.getChildren()){
+            Individual child = individualMap.get(iid);
+            if((hus.getAge() - child.getAge()) >= 80){
+                String err12 = String.format("Error US12: %s (%s) Father %s (%s) is too old.",child.getName(), child.getId(), hus.getName(), hus.getId());
+                errorList.add(err12);
+
+            }
+            if((wif.getAge() - child.getAge()) >= 60){
+                String err12 = String.format("Error US12: %s (%s) Mother %s (%s) is too old.",child.getName(), child.getId(), wif.getName(), wif.getId());
+                errorList.add(err12);
+
+            }
+
+        }
+    }
+
+    public static void hasOrphans(Family fam, Map<String,Individual> individualMap, Map<String,Individual> orphanMap,ArrayList<String> errorList) {
+        Individual hus = individualMap.get(fam.getHusbandID());
+        Individual wif = individualMap.get(fam.getWifeID());
+        if ((!hus.isAlive()) && (!wif.isAlive())) {
+            for (String iid : fam.getChildren()) {
+                Individual child = individualMap.get(iid);
+                if (child.getAge() < 18) {
+                    orphanMap.put(child.getId(), child);
+                }
+            }
+        }
+    }
 
     public static void listSingleOverThirty(Map<String, Individual> individualMap){
         for(String iid: individualMap.keySet()){
@@ -329,11 +360,12 @@ public class GEDCOMParser {
         }
     }
     public static void main(String[] args) {
-        String fileName = "/Users/jaydeepdobariya/Desktop/Spring Sem/CS 555 - Agile Methodologies/family.ged"; // replace with actual file name
+        String fileName ="/Users/jaydeepdobariya/Desktop/Spring Sem/CS 555 - Agile Methodologies/family.ged"; // replace with actual file name
 
         Map<String, Individual> individualsMap = new TreeMap<>();
         Map<String, Family> familiesMap = new TreeMap<>();
         ArrayList<String> errorList = new ArrayList<>();
+        Map<String, Individual> orphanMap = new TreeMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
@@ -522,12 +554,20 @@ public class GEDCOMParser {
         System.out.println("Family:");
         for (String fid : familiesMap.keySet()) {
             Family fam = familiesMap.get(fid);
+            parentsTooOld(fam,individualsMap,errorList);
+            hasOrphans(fam,individualsMap,orphanMap,errorList);
             System.out.printf("ID = {%s}, Married = {%s}, Divorced = {%s}, Husband ID = {%s}, Husband Name = {%s}, Wife ID = {%s}, Wife Name = {%s}, Childern = {%s}\n",
                     fid, fam.getMarried().toString(), fam.getDivorced().toString(), fam.getHusbandID(), individualsMap.get(fam.getHusbandID()).getName(),fam.getWifeID(), individualsMap.get(fam.getWifeID()).getName(), fam.getChildren().toString());
         }
         System.out.println("Deceased:");
         listDeceased(individualsMap);
 
+        System.out.println("\nUS12: Orphans:");
+        for (String iid : orphanMap.keySet()) {
+            Individual indiv = orphanMap.get(iid);
+            System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                        iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+            }
         System.out.println("\nUS30: Living married people:");
         listLivingMarried(individualsMap);
 
