@@ -1,3 +1,4 @@
+import javax.naming.InitialContext;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -10,6 +11,36 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class GEDCOMParser {
+
+    public static boolean isRecentDeath(Individual ind){
+        LocalDate currentDate = LocalDate.now();
+        if(!ind.getDeathDate().toString().equals("NA")){
+            long daysBtn = ChronoUnit.DAYS.between((LocalDate) ind.getDeathDate(), currentDate);
+            if(daysBtn <= 30 && daysBtn >= 0){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static  boolean isEarlyMarried(Map<String,Individual> indiMap,Family fam, ArrayList<String> errorList){
+        boolean marrFlag = false;
+        Individual hus = indiMap.get(fam.getHusbandID());
+        Individual wife = indiMap.get(fam.getWifeID());
+        LocalDate marrDate = (LocalDate) fam.getMarried();
+        long husyearBtn = ChronoUnit.YEARS.between((LocalDate) hus.getBirthday(), marrDate);
+        long wifeyearBtn = ChronoUnit.YEARS.between((LocalDate) wife.getBirthday(), marrDate);
+        if(husyearBtn < 14){
+            errorList.add(String.format("Error US10: %s (%s) in family (%s) is married before the age of 14",hus.getName().replace("/",""),hus.getId(),fam.getId() ));
+            marrFlag = true;
+        }
+        if (wifeyearBtn < 14){
+            errorList.add(String.format("Error US10: %s (%s) in family (%s) is married before the age of 14",hus.getName().replace("/",""),hus.getId(),fam.getId() ));
+            marrFlag = true;
+        }
+
+        return marrFlag;
+    }
 
     public static boolean isLastNameSameInFamily(Map<String, Individual> indiMap, Family fam){
         String chLastName;
@@ -25,18 +56,15 @@ public class GEDCOMParser {
         return true;
     }
 
-    public static boolean isBirthBeforeMarriageOfParents(Individual indi){
-        Family fam = indi.getFamily();
+    public static boolean isBirthBeforeMarriageOfParents(Individual indi,Map<String, Family> famMap){
+        Family fam = famMap.get(indi.isChild());
         LocalDate marrDate = null;
         if(fam != null){
             marrDate = (LocalDate) fam.getMarried();
         }else{
             return false;
         }
-
         LocalDate bday = (LocalDate) indi.getBirthday();
-
-
         if(bday.isAfter(marrDate)){
             return false;
         }
@@ -47,10 +75,7 @@ public class GEDCOMParser {
             LocalDate divDateAfterNineMonths = divDate.plusMonths(9);
             if(bday.isBefore(divDateAfterNineMonths)) return false;
         }
-
         return true;
-
-
     }
 
     public static boolean isDivorceBeforeDeath(Map<String, Individual> indiMap, Family fam) {
@@ -580,11 +605,22 @@ public class GEDCOMParser {
         System.out.println("\nUS39: List upcoming anniversaries:");
         listUpcomingAnniversaries(familiesMap,individualsMap);
 
+        System.out.println("\nUS36: List of recent deaths:");
+        for(String iid: individualsMap.keySet()){
+            Individual indiv = individualsMap.get(iid);
+            if(isRecentDeath(indiv)){
+                System.out.printf("ID = {%s}, Name = {%s}, Gender = {%s}, Birthday = {%s}, Age = {%d}, Alive = {%b}, Death = {%s}, Child = {%s}, Spouse = {%s}\n",
+                        iid, indiv.getName(), indiv.getGender(), indiv.getBirthday().toString(), indiv.getAge(), indiv.isAlive(), indiv.getDeathDate().toString(), indiv.isChild(), indiv.isSpouse());
+            }
+        }
+
 
         for(String famID: familiesMap.keySet()){
-            if(!isLastNameSameInFamily(individualsMap, familiesMap.get(famID))){
+            Family fam = familiesMap.get(famID);
+            if(!isLastNameSameInFamily(individualsMap, fam)){
                 errorList.add(String.format("Error US16: All male members of a family (%s)  must have the same last name",famID));
             }
+            isEarlyMarried(individualsMap, fam, errorList);
         }
         for(String iID: individualsMap.keySet()){
             Individual indi = individualsMap.get(iID);
@@ -592,7 +628,7 @@ public class GEDCOMParser {
                 continue;
             };
 
-            if(isBirthBeforeMarriageOfParents(indi)){
+            if(isBirthBeforeMarriageOfParents(indi,familiesMap)){
                 errorList.add(String.format("Error US08: Children (%s) should be born after marriage of parents (and not more than 9 months after their divorce))", iID));
             }
         }

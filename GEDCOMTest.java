@@ -320,6 +320,8 @@ public class GEDCOMTest {
         wife.setName("Lora /Neo/");
         ch1.setGender("M");
         ch2.setGender("M");
+        ch1.setChild("F1");
+        ch2.setChild("F1");
         hus.setGender("M");
         wife.setGender("F");
         Map<String, Individual> indiMap = new HashMap<>();
@@ -328,15 +330,53 @@ public class GEDCOMTest {
         indiMap.put("I3", hus);
         indiMap.put("I4", wife);
 
+        Map<String, Family> famMap = new HashMap<>();
+
         Family fam = new Family("F1");
         fam.setHusbandID("I3");
-        fam.setHusbandID("I4");
+        fam.setWifeID("I4");
         ch1.setFamily(fam);
         ch2.setFamily(fam);
+        fam.setMarried(LocalDate.of(2012, 1, 1));
+        famMap.put("F1", fam);
+        assertTrue(GEDCOMParser.isBirthBeforeMarriageOfParents(ch1,famMap));
+        assertFalse(GEDCOMParser.isBirthBeforeMarriageOfParents(ch2,famMap));
 
-        fam.setMarried(        LocalDate.of(2012, 1, 1));
-        assertTrue(GEDCOMParser.isBirthBeforeMarriageOfParents(ch1));
-        assertFalse(GEDCOMParser.isBirthBeforeMarriageOfParents(ch2));
+    }
+
+    @Test
+    public void isRecentDeath(){
+        Individual ch1 = new Individual("I1");
+        Individual ch2 = new Individual("I2");
+        ch1.setDeath(LocalDate.of(2023, 4, 25));
+        ch2.setDeath(LocalDate.of(2014, 1, 1));
+        assertTrue(GEDCOMParser.isRecentDeath(ch1));
+        assertFalse(GEDCOMParser.isRecentDeath(ch2));
+    }
+
+    @Test void isEarlyMarried(){
+        Individual hus = new Individual("I3");
+        Individual wife = new Individual("I4");
+        hus.setGender("M");
+        wife.setGender("F");
+        hus.setBirthday(LocalDate.of(2010, 1, 1));
+        wife.setBirthday(LocalDate.of(2014, 1, 1));
+        Map<String, Individual> indiMap = new HashMap<>();
+        indiMap.put("I3", hus);
+        indiMap.put("I4", wife);
+
+
+        Family fam = new Family("F1");
+        fam.setHusbandID("I3");
+        fam.setWifeID("I4");
+        fam.setMarried(LocalDate.of(2023, 1, 1));
+
+        assertTrue(GEDCOMParser.isEarlyMarried(indiMap, fam, new ArrayList<>()));
+
+        hus.setBirthday(LocalDate.of(2000, 1, 1));
+        wife.setBirthday(LocalDate.of(2001, 1, 1));
+        fam.setMarried(LocalDate.of(2023, 1, 1));
+        assertFalse(GEDCOMParser.isEarlyMarried(indiMap, fam, new ArrayList<>()));
 
     }
 
