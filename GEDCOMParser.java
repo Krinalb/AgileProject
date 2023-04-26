@@ -12,6 +12,32 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isMultipleBirth(Map<String, Individual> indiMap,Family fam,ArrayList<String> errorList){
+    Boolean multiBirthFlag = false;
+    List<String> childList = fam.getChildren();
+    HashMap<String, Integer> births = new HashMap<>();
+    String error = "Error US32: ";
+    if(childList.size() < 2){
+        multiBirthFlag = false;
+    } else{
+        for(String child: childList){
+            births.merge(indiMap.get(child).getBirthday().toString(), 1, Integer::sum);
+        }
+        for(String childID: childList){
+            Individual child = indiMap.get(childID);
+            if(births.get(child.getBirthday().toString()) > 1){
+                error += String.format("%s (%s), ",child.getName().replace("/", ""),child.getId());
+                multiBirthFlag = true;
+            }
+        }
+        if(multiBirthFlag){
+            error += " in family (" + fam.getId() + ") are the multiple births.";
+            errorList.add(error);
+        }
+    }
+    return multiBirthFlag;
+}
+
     public static boolean isRecentDeath(Individual ind){
         LocalDate currentDate = LocalDate.now();
         if(!ind.getDeathDate().toString().equals("NA")){
@@ -614,6 +640,34 @@ public class GEDCOMParser {
             }
         }
 
+        System.out.println("\nUS37: List of recent survivors:");
+for(String iid: individualsMap.keySet()){
+    Individual indiv = individualsMap.get(iid);
+    String msg = "Recently death ";
+    if(isRecentDeath(indiv)){
+        msg += String.format("individual %s (%s) ",indiv.getName().replace("/", ""),indiv.getId());
+        if(!indiv.isSpouse().equals("NA")){
+            Family fam = familiesMap.get(indiv.isSpouse());
+            if(indiv.getId().equals(fam.getHusbandID()) || indiv.getId().equals(fam.getWifeID())){
+                if(individualsMap.get(fam.getWifeID()).isAlive()){
+                    msg+= String.format(", has living spouse %s", fam.getWifeID());
+                }
+                if(individualsMap.get(fam.getHusbandID()).isAlive()){
+                    msg+= String.format(", has living spouse %s", fam.getWifeID());
+                }
+            }
+            for(String child: fam.getChildren()){
+                if(individualsMap.get(child).isAlive()){
+                    msg+= String.format(", %s", child);
+                }
+            }
+            msg += "are the living descendants";
+        }
+        System.out.println(msg);
+    }
+
+}
+
 
         for(String famID: familiesMap.keySet()){
             Family fam = familiesMap.get(famID);
@@ -621,6 +675,8 @@ public class GEDCOMParser {
                 errorList.add(String.format("Error US16: All male members of a family (%s)  must have the same last name",famID));
             }
             isEarlyMarried(individualsMap, fam, errorList);
+
+            isMultipleBirth(individualsMap, fam, errorList);
         }
         for(String iID: individualsMap.keySet()){
             Individual indi = individualsMap.get(iID);
