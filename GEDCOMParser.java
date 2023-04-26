@@ -12,6 +12,44 @@ import java.util.regex.Pattern;
 
 public class GEDCOMParser {
 
+    public static boolean isFirstNameUnique(Map<String, Individual> indiMap, Family fam){
+        Boolean sameNameBirthFlag = true;
+        HashMap<String, Integer> snameList = new HashMap<>();
+        HashMap<String, String> sbirthList = new HashMap<>();
+        if(fam.getChildren().size() <= 1){
+            return true;
+        }else{
+            for(String child: fam.getChildren()){
+                snameList.merge(indiMap.get(child).getName(),1, Integer::sum);
+            }
+            for(Map.Entry<String, Integer> ch: snameList.entrySet()){
+                if(ch.getValue() >= 2){
+                    if(sbirthList.get(ch.getKey()) == null){
+                        for(String chileId: fam.getChildren()){
+                            if(sbirthList.get(ch.getKey()) == null){
+                                if(indiMap.get(chileId).getName().equals(ch.getKey())){
+                                    sbirthList.put(ch.getKey(), indiMap.get(chileId).getBirthday().toString());
+                                }
+                            }else {
+                                int count = 1;
+                                for(String chileID: fam.getChildren()){
+                                    if(indiMap.get(chileID).getBirthday().toString().equals(sbirthList.get(ch.getKey()))){
+                                        count++;
+                                    }
+                                }
+                                if(count >= 2){
+                                    sameNameBirthFlag = false;
+                                }
+                            }
+    
+                        }
+                    }
+                }
+            }
+            return  sameNameBirthFlag;
+        }
+    }
+
     public static boolean isMultipleBirth(Map<String, Individual> indiMap,Family fam,ArrayList<String> errorList){
     Boolean multiBirthFlag = false;
     List<String> childList = fam.getChildren();
@@ -668,6 +706,33 @@ for(String iid: individualsMap.keySet()){
 
 }
 
+System.out.println("\nUS28: Order siblings by age:");
+for(String famID: familiesMap.keySet()){
+    Family fam = familiesMap.get(famID);
+    if(fam.getChildren().size() != 0){
+        String message = String.format("Family (%s):\n", fam.getId());
+        ArrayList<ArrayList<String>> childList = new ArrayList<>();
+        for(String child : fam.getChildren()){
+            childList.add(new ArrayList<>(){
+                {
+                    add(child);
+                    add(String.valueOf(individualsMap.get(child).getAge()));
+                }
+            });
+        }
+        Collections.sort(childList, new Comparator<ArrayList<String>>() {
+            @Override
+            public int compare(ArrayList<String> o1, ArrayList<String> o2) {
+                return o2.get(1).compareTo(o1.get(1));
+            }
+        });
+        for(ArrayList<String> child : childList){
+            Individual ch = individualsMap.get(child.get(0));
+            message += String.format("%s (%s): age = %d\n", ch.getName().replace("/",""), child.get(0), ch.getAge());
+        }
+        System.out.println(message);
+    }
+}
 
         for(String famID: familiesMap.keySet()){
             Family fam = familiesMap.get(famID);
@@ -677,6 +742,10 @@ for(String iid: individualsMap.keySet()){
             isEarlyMarried(individualsMap, fam, errorList);
 
             isMultipleBirth(individualsMap, fam, errorList);
+            
+            if(!isFirstNameUnique(individualsMap, fam)){
+                errorList.add(String.format("Error US25: family (%s) have multiple births.",famID));
+            }
         }
         for(String iID: individualsMap.keySet()){
             Individual indi = individualsMap.get(iID);
