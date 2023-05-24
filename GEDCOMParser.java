@@ -11,8 +11,101 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class GEDCOMParser {
+    public static boolean fewerThanFifteenSiblings(Family fam){
+        if(fam.getChildren().size() < 15) return true;
+        else return false;
+       }
+       
+       public static boolean isSiblingMarrOneAnother(Map<String,Family> famMap, Family fam){
+           for(String fmId: famMap.keySet()){
+               Family fm = famMap.get(fmId);
+               if((!fam.getId().equals(fmId)) && fm.getChildren().size() > 1){
+                   List<String> chList = fm.getChildren();
+                   if(chList.contains(fam.getHusbandID()) && chList.contains(fam.getWifeID())){
+                       return true;
+                   }
+               }
+           }
+           return false;
+       }
+       
+       public static boolean multiBirth(Map<String, Individual> indiMap, Family fam){
+           if(fam.getChildren().size() < 6) return false;
+           else{
+               List<String> chList = fam.getChildren();
+               HashMap<String, Integer> multiBirthCounter = new HashMap<>();
+               Individual indi;
+               for(String chId: chList){
+                   indi = indiMap.get(chId);
+                   multiBirthCounter.merge(indi.getBirthday().toString(), 1 ,Integer::sum);
+               }
+               for(String bday: multiBirthCounter.keySet()){
+                   if(multiBirthCounter.get(bday) > 5){
+                       return true;
+                   }
+               }
+           }
+           return false;
+       }
+  
+       public static boolean siblingsSpacing(Map<String, Individual> indiMap, Family fam){
+        if(fam.getChildren().size() < 2) return true;
+        else{
+            List<String> chList = fam.getChildren();
+            Individual ind1, ind2;
+            for(int i = 0; i < fam.getChildren().size(); i++){
+                ind1 = indiMap.get(chList.get(i));
+                for(int j = i+1; j < fam.getChildren().size(); j++){
+                    ind2 = indiMap.get(chList.get(j));
+                    if(ind1.getBirthday().isAfter(ind2.getBirthday())){
+                
+                        long btnDay = Period.between(ind2.getBirthday(),ind1.getBirthday()).getDays();
+                        if( btnDay >= 2 && btnDay <= 245){
+                            return false;
+                        }
+                    }else if(ind1.getBirthday().isBefore(ind2.getBirthday())){
+          
+                        long btnDay = Period.between(ind1.getBirthday(),ind2.getBirthday()).getDays();
+    
+                        if( btnDay >= 2 && btnDay <= 245){
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
-    public static boolean isFirstNameUnique(Map<String, Individual> indiMap, Family fam){
+        public static boolean isFirstMarriage(Individual inv, Map<String, Individual> indiMap, ArrayList<String> errorList) {   
+
+        if (inv != null) {
+            if (inv.getFamily() != null) {
+                Family fam = inv.getFamily();
+                if (fam.getDivorced() == "NA") {
+                    String name = null;
+                    String spouse;
+                    Individual sp = null;
+                    if ("M".equals(inv.getGender())) {
+                        spouse = fam.getWifeID();
+                        sp = indiMap.get(spouse);
+                        name = inv.getName().replace("/", "");
+                    } else if ("F".equals(inv.getGender())) {
+                        spouse = fam.getHusbandID();
+                        sp = indiMap.get(spouse);
+                        name = inv.getName().replace("/", "");
+                    }
+                    if (sp.isAlive()) {
+                        errorList.add(String.format("Error US:11: %s (%s) in family (%s) is already married.", name, sp.getId(), fam.getId()));
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+       public static boolean isFirstNameUnique(Map<String, Individual> indiMap, Family fam){
         Boolean sameNameBirthFlag = true;
         HashMap<String, Integer> snameList = new HashMap<>();
         HashMap<String, String> sbirthList = new HashMap<>();
@@ -501,6 +594,7 @@ public class GEDCOMParser {
                                 Individual husband;
                                 currentFamily.setHusbandID(tokens[2]);
                                 husband = individualsMap.get(tokens[2]);
+                                isFirstMarriage(husband, individualsMap, errorList);
                                 husband.setFamily(currentFamily);
                                 isGenderCorrect(husband, "M",errorList);
                             }
@@ -511,6 +605,8 @@ public class GEDCOMParser {
                                 Individual wife;
                                 currentFamily.setWifeID(tokens[2]);
                                 wife = individualsMap.get(tokens[2]);
+                                isFirstMarriage(wife, individualsMap, errorList);
+
                                 wife.setFamily(currentFamily);
                                 isGenderCorrect(wife, "F",errorList);
                             }
@@ -745,6 +841,22 @@ for(String famID: familiesMap.keySet()){
             
             if(!isFirstNameUnique(individualsMap, fam)){
                 errorList.add(String.format("Error US25: family (%s) have multiple births.",famID));
+            }
+
+            if(!siblingsSpacing(individualsMap, fam)){
+                errorList.add(String.format("Error US13: Birth dates of siblings should be more than 8 months apart or less than 2 days apart  in a family (%s)",famID));
+            }
+
+            if(multiBirth(individualsMap, fam)){
+                errorList.add(String.format("Error US14: No more than five siblings should be born at the same time in a family (%s)",famID));
+            }
+            
+            if(!fewerThanFifteenSiblings(fam)){
+                errorList.add(String.format("Error US15: There should be fewer than 15 siblings in a family (%s)",famID));
+            }
+            
+            if(isSiblingMarrOneAnother(familiesMap, fam)){
+                errorList.add(String.format("Error US18: Siblings should not marry one another in a family (%s)",famID));
             }
         }
         for(String iID: individualsMap.keySet()){
