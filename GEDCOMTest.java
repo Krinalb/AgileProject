@@ -353,7 +353,88 @@ public class GEDCOMTest {
         assertTrue(GEDCOMParser.isRecentDeath(ch1));
         assertFalse(GEDCOMParser.isRecentDeath(ch2));
     }
+    @Test
+    public void isFewerThanFifteenSibling(){
+    
+            Family fam = new Family("@FTest@");
+            fam.addChildren("@I3@");
+            assertTrue(GEDCOMParser.fewerThanFifteenSiblings(fam));
+            for(int i=0; i< 20; i++){
+                fam.addChildren("@I"+i+"@");
+            }
+            assertFalse(GEDCOMParser.fewerThanFifteenSiblings(fam));
+    }
+    
+    @Test
+    public void isSiblingMarrOneAnother(){
+        Map<String, Family> famMap = new HashMap<>();
+        Family fam1 = new Family("@FTest1@");
+        fam1.addChildren("@I3@");
+        fam1.addChildren("@I5@");
+        fam1.setHusbandID("@I11@");
+        fam1.setWifeID("@I10@");
+        Family fam2 = new Family("@FTest2@");
+        fam2.addChildren("@I4@");
+        fam2.addChildren("@I6@");
+        fam2.setHusbandID("@I13@");
+        fam2.setWifeID("@I15@");
+        Family fam = new Family("@FTest3@");
+        fam.setHusbandID("@I3@");
+        fam.setWifeID("@I5@");
+    
+        famMap.put("@FTest1@", fam1);
+        famMap.put("@FTest2@", fam2);
+        famMap.put("@FTest3@", fam);
+    
+        assertTrue(GEDCOMParser.isSiblingMarrOneAnother(famMap, fam));
+        assertFalse(GEDCOMParser.isSiblingMarrOneAnother(famMap, fam2));
+    }
+    
+    @Test
+    public void isMultiBirth(){
+        Map<String, Individual> indiMap = new HashMap<>();
+        String[] id = new String[]{"I1", "I2", "I3", "I4", "I5"};
+        Individual ind;
+        Family fam = new Family("FTest");
+    
+        for(String sid: id){
+            ind = new Individual(sid);
+            ind.setBirthday(LocalDate.of(2010, 1, 1));
+            indiMap.put(sid, ind);
+            fam.addChildren(sid);
+        }
+        assertFalse(GEDCOMParser.multiBirth(indiMap, fam));
+    
+        ind = new Individual("I6");
+        ind.setBirthday(LocalDate.of(2010, 1, 1));
+        indiMap.put("I6", ind);
+        fam.addChildren("I6");
+    
+        assertTrue(GEDCOMParser.multiBirth(indiMap, fam));
+    
+    }
 
+    @Test
+    public void siblingSpace(){
+        Map<String, Individual> indiMap = new HashMap<>();
+        int count = 0;
+        String[] id = new String[]{"I1", "I2"};
+        Individual ind;
+        Family fam = new Family("FTest");
+        for(String sid: id){
+            ind = new Individual(sid);
+            ind.setBirthday(LocalDate.of(2010+count, 1, 1));
+            indiMap.put(sid, ind);
+            fam.addChildren(sid);
+            count++;
+        }
+        assertTrue(GEDCOMParser.siblingsSpacing(indiMap, fam));
+        ind = new Individual("I6");
+        ind.setBirthday(LocalDate.of(2010, 1, 3));
+        indiMap.put("I6", ind);
+        fam.addChildren("I6");
+        assertFalse(GEDCOMParser.siblingsSpacing(indiMap, fam));
+    }
     @Test void isEarlyMarried(){
         Individual hus = new Individual("I3");
         Individual wife = new Individual("I4");
@@ -381,3 +462,37 @@ public class GEDCOMTest {
     }
 
 }
+@Test
+    void testIsFirstMarriage() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy");
+
+        Individual hus = new Individual("H");
+        hus.setSpouse("MF1");
+        LocalDate inputdate = LocalDate.parse("23 JUL 2001", formatter);
+        hus.setBirthday(inputdate);
+        hus.setGender("M");
+
+        Individual wife1 = new Individual("WF1");
+        wife1.setSpouse("MF1");
+        inputdate = LocalDate.parse("23 SEP 2001", formatter);
+        wife1.setBirthday(inputdate);
+        wife1.setGender("F");
+        assertTrue(GEDCOMParser.isFirstMarriage(hus, indiMap, new ArrayList<>()));
+        assertTrue(GEDCOMParser.isFirstMarriage(wife1, indiMap, new ArrayList<>()));
+
+        Family fam = new Family("MF1");
+        fam.setHusbandID("H");
+        fam.setWifeID("WF1");
+        inputdate = LocalDate.parse("14 DEC 2019", formatter);
+        fam.setMarried(inputdate);
+
+        Map<String, Individual> indiMap = new HashMap<>() {
+            {
+                put("H", hus);
+                put("WF1", wife1);
+            }
+        };
+
+        assertFalse(GEDCOMParser.isFirstMarriage(hus, indiMap, new ArrayList<>()));
+
+    }
